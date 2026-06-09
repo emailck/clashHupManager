@@ -1,0 +1,15 @@
+services:
+  clash-sub-manager:
+    build: .
+    container_name: clash-sub-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-change-me}"
+      SESSION_SECRET: "${SESSION_SECRET:-replace-with-a-long-random-string}"
+      SUB_TOKEN: "${SUB_TOKEN:-replace-with-a-random-token}"
+      BASE_URL: "${BASE_URL:-http://localhost:3000}"
+      DATABASE_PATH: "/app/data/app.db"
+    volumes:
+      - ./data:/app/data
