@@ -28,10 +28,10 @@ function loadTemplate(): Config {
 function setRuleProviderUrls(config: Config) {
   if (!config["rule-providers"]) return;
   if (config["rule-providers"].my_proxy) {
-    config["rule-providers"].my_proxy.url = `${env.baseUrl}/rules/proxy.list`;
+    config["rule-providers"].my_proxy.url = `${env.baseUrl}/rules/proxy.list?token=${encodeURIComponent(env.subToken)}`;
   }
   if (config["rule-providers"].my_direct) {
-    config["rule-providers"].my_direct.url = `${env.baseUrl}/rules/direct.list`;
+    config["rule-providers"].my_direct.url = `${env.baseUrl}/rules/direct.list?token=${encodeURIComponent(env.subToken)}`;
   }
 }
 

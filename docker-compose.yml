@@ -4,11 +4,11 @@ services:
     container_name: clash-sub-manager
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
-      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-change-me}"
-      SESSION_SECRET: "${SESSION_SECRET:-replace-with-a-long-random-string}"
-      SUB_TOKEN: "${SUB_TOKEN:-replace-with-a-random-token}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?set a strong admin password}"
+      SESSION_SECRET: "${SESSION_SECRET:?set a long random session secret}"
+      SUB_TOKEN: "${SUB_TOKEN:?set a long random subscription token}"
       BASE_URL: "${BASE_URL:-http://localhost:3000}"
       DATABASE_PATH: "/app/data/app.db"
     volumes:

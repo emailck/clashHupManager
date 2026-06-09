@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/auth";
 import { generateConfigYaml } from "@/lib/generator";
+import { requireAdmin, textNoStore } from "@/lib/security";
 
 export async function GET() {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return new NextResponse(generateConfigYaml(), {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+  return textNoStore(generateConfigYaml(), {
     headers: { "content-type": "text/yaml; charset=utf-8" },
   });
 }

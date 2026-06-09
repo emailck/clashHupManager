@@ -1,14 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/auth";
+import { NextRequest } from "next/server";
 import { db, listRules } from "@/lib/db";
+import { jsonNoStore, requireAdmin } from "@/lib/security";
 
 export async function GET() {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  return NextResponse.json({ rules: listRules() });
+  const authError = await requireAdmin();
+  if (authError) return authError;
+  return jsonNoStore({ rules: listRules() });
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const authError = await requireAdmin(request);
+  if (authError) return authError;
+
   const body = await request.json();
   const type = body.list_type === "direct" ? "direct" : "proxy";
   const lines = String(body.value || "")
@@ -21,5 +24,5 @@ export async function POST(request: NextRequest) {
     lines.forEach((line, index) => insert.run(type, line, maxOrder.value + 10 + index));
   });
   tx();
-  return NextResponse.json({ ok: true, rules: listRules() });
+  return jsonNoStore({ ok: true, rules: listRules() });
 }

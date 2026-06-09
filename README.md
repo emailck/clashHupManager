@@ -51,14 +51,16 @@ http://localhost:3000
 admin
 ```
 
+生产环境会拒绝使用默认、过短或重复的 `ADMIN_PASSWORD`、`SESSION_SECRET`、`SUB_TOKEN`。
+
 ## 环境变量
 
 复制 `.env.example` 为 `.env`，并修改为强随机值：
 
 ```env
-ADMIN_PASSWORD=your-admin-password
-SESSION_SECRET=replace-with-a-long-random-string
-SUB_TOKEN=replace-with-a-random-token
+ADMIN_PASSWORD=replace-with-a-strong-admin-password
+SESSION_SECRET=replace-with-at-least-32-random-characters
+SUB_TOKEN=replace-with-at-least-24-random-characters
 DATABASE_PATH=./data/app.db
 BASE_URL=https://sub.example.com
 ```
@@ -66,8 +68,8 @@ BASE_URL=https://sub.example.com
 说明：
 
 - `ADMIN_PASSWORD`：后台登录密码
-- `SESSION_SECRET`：登录 cookie 签名密钥
-- `SUB_TOKEN`：订阅 URL token
+- `SESSION_SECRET`：登录 session HMAC 密钥，生产环境至少 32 位随机字符
+- `SUB_TOKEN`：订阅 URL token，生产环境至少 24 位随机字符；规则列表也会通过此 token 保护
 - `DATABASE_PATH`：SQLite 数据库路径
 - `BASE_URL`：生成订阅里规则列表 URL 时使用的公网地址
 
@@ -129,7 +131,8 @@ IP-CIDR,1.2.3.4/32,no-resolve
 ## 生产建议
 
 - 使用 HTTPS
-- 使用强随机 `SUB_TOKEN`
+- 使用强随机 `ADMIN_PASSWORD`、`SESSION_SECRET` 和 `SUB_TOKEN`
 - 不要公开后台地址，或在反代层增加访问控制
+- Docker Compose 默认只绑定 `127.0.0.1:3000`，建议通过 Nginx/Caddy 暴露 HTTPS
 - 定期备份 `data/app.db`
 - 如果迁移服务器，只需要迁移 `.env` 和 `data/app.db`

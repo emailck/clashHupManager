@@ -33,6 +33,12 @@ db.exec(`
     key text primary key,
     value text not null
   );
+
+  create table if not exists sessions (
+    token_hash text primary key,
+    expires_at integer not null,
+    created_at text not null default current_timestamp
+  );
 `);
 
 const defaults = [
