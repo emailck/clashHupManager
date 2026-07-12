@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
 import { env } from "@/lib/env";
-import { getSettings, listNodes, listRules } from "@/lib/db";
+import { getSettings, listNodes, listRules, listSubscriptionConfigs } from "@/lib/db";
 import Dashboard from "@/app/ui/Dashboard";
 import LoginForm from "@/app/ui/LoginForm";
 
@@ -15,12 +15,16 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
   }
   if (!authed) return <LoginForm />;
 
+  const configs = listSubscriptionConfigs();
+  const activeConfig = configs[0];
+
   return (
     <Dashboard
-      initialNodes={listNodes()}
-      initialRules={listRules()}
-      initialSettings={getSettings()}
-      subscriptionUrl={`${env.baseUrl}/sub/${env.subToken}.yaml`}
+      initialConfigs={configs}
+      initialNodes={listNodes(activeConfig.id)}
+      initialRules={listRules(activeConfig.id)}
+      initialSettings={getSettings(activeConfig.id)}
+      subscriptionBaseUrl={`${env.baseUrl}/sub`}
     />
   );
 }

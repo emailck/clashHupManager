@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { db, listRules } from "@/lib/db";
+import { db, getSubscriptionConfig, listRules } from "@/lib/db";
 import { jsonNoStore, requireAdmin } from "@/lib/security";
 
 export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -7,6 +7,8 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
   if (authError) return authError;
 
   const { id } = await context.params;
-  db.prepare("delete from rules where id = ?").run(id);
-  return jsonNoStore({ ok: true, rules: listRules() });
+  const configId = Number(request.nextUrl.searchParams.get("configId"));
+  if (!Number.isInteger(configId) || !getSubscriptionConfig(configId)) return jsonNoStore({ error: "配置不存在" }, { status: 404 });
+  db.prepare("delete from rules where id = ? and config_id = ?").run(id, configId);
+  return jsonNoStore({ ok: true, rules: listRules(configId) });
 }

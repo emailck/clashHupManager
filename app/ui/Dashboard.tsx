@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Eye, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Eye, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 type NodeRow = {
@@ -19,14 +19,23 @@ type RuleRow = {
   sort_order: number;
 };
 
+type SubscriptionConfig = {
+  id: number;
+  name: string;
+  token: string;
+};
+
 type Props = {
+  initialConfigs: SubscriptionConfig[];
   initialNodes: NodeRow[];
   initialRules: RuleRow[];
   initialSettings: Record<string, string>;
-  subscriptionUrl: string;
+  subscriptionBaseUrl: string;
 };
 
-export default function Dashboard({ initialNodes, initialRules, initialSettings, subscriptionUrl }: Props) {
+export default function Dashboard({ initialConfigs, initialNodes, initialRules, initialSettings, subscriptionBaseUrl }: Props) {
+  const [configs, setConfigs] = useState(initialConfigs);
+  const [activeConfigId, setActiveConfigId] = useState(initialConfigs[0].id);
   const [nodes, setNodes] = useState(initialNodes);
   const [rules, setRules] = useState(initialRules);
   const [settings, setSettings] = useState(initialSettings);
@@ -35,6 +44,10 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
   const [ruleText, setRuleText] = useState("");
   const [preview, setPreview] = useState("");
   const [message, setMessage] = useState("");
+  const [configName, setConfigName] = useState(initialConfigs[0].name);
+
+  const activeConfig = configs.find((config) => config.id === activeConfigId) || configs[0];
+  const subscriptionUrl = `${subscriptionBaseUrl}/${activeConfig.token}.yaml`;
 
   const enabledNodeNames = useMemo(() => nodes.filter((node) => node.enabled).map((node) => node.name), [nodes]);
   const currentRules = rules.filter((rule) => rule.list_type === ruleTab);
@@ -49,22 +62,93 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
     { key: "default_reject", label: "🛑 广告拦截", selfGroup: "🛑 广告拦截" },
   ];
 
-  async function refreshAll() {
+  async function loadConfig(configId: number) {
     const [nodeResponse, ruleResponse, settingsResponse] = await Promise.all([
-      fetch("/api/nodes"),
-      fetch("/api/rules"),
-      fetch("/api/settings"),
+      fetch(`/api/nodes?configId=${configId}`),
+      fetch(`/api/rules?configId=${configId}`),
+      fetch(`/api/settings?configId=${configId}`),
     ]);
     if (nodeResponse.ok) setNodes((await nodeResponse.json()).nodes);
     if (ruleResponse.ok) setRules((await ruleResponse.json()).rules);
     if (settingsResponse.ok) setSettings((await settingsResponse.json()).settings);
   }
 
+  async function selectConfig(configId: number) {
+    const config = configs.find((item) => item.id === configId);
+    if (!config) return;
+    setActiveConfigId(configId);
+    setConfigName(config.name);
+    setPreview("");
+    await loadConfig(configId);
+  }
+
+  async function refreshAll() {
+    const response = await fetch("/api/configs");
+    if (response.ok) {
+      const nextConfigs = (await response.json()).configs as SubscriptionConfig[];
+      setConfigs(nextConfigs);
+      const nextConfig = nextConfigs.find((config) => config.id === activeConfigId) || nextConfigs[0];
+      setActiveConfigId(nextConfig.id);
+      setConfigName(nextConfig.name);
+      await loadConfig(nextConfig.id);
+      return;
+    }
+    await loadConfig(activeConfigId);
+  }
+
+  async function createConfig() {
+    const response = await fetch("/api/configs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: configName }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.error || "新增配置失败");
+      return;
+    }
+    setConfigs(data.configs);
+    setActiveConfigId(data.config.id);
+    setConfigName(data.config.name);
+    await loadConfig(data.config.id);
+    setPreview("");
+    setMessage("订阅配置已创建");
+  }
+
+  async function renameConfig() {
+    const response = await fetch(`/api/configs/${activeConfigId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: configName }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.error || "保存配置名称失败");
+      return;
+    }
+    setConfigs(data.configs);
+    setConfigName(data.config.name);
+    setMessage("配置名称已保存");
+  }
+
+  async function deleteConfig() {
+    if (!window.confirm(`删除“${activeConfig.name}”及其节点和规则？`)) return;
+    const response = await fetch(`/api/configs/${activeConfigId}`, { method: "DELETE" });
+    const data = await response.json();
+    if (!response.ok) {
+      setMessage(data.error || "删除配置失败");
+      return;
+    }
+    setConfigs(data.configs);
+    await selectConfig(data.configs[0].id);
+    setMessage("订阅配置已删除");
+  }
+
   async function addNode() {
     const response = await fetch("/api/nodes", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ uri: nodeUri }),
+      body: JSON.stringify({ uri: nodeUri, configId: activeConfigId }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -77,7 +161,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
   }
 
   async function deleteNode(id: number) {
-    const response = await fetch(`/api/nodes/${id}`, { method: "DELETE" });
+    const response = await fetch(`/api/nodes/${id}?configId=${activeConfigId}`, { method: "DELETE" });
     if (response.ok) setNodes((await response.json()).nodes);
   }
 
@@ -85,7 +169,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
     const response = await fetch(`/api/nodes/${node.id}`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ enabled: !node.enabled }),
+      body: JSON.stringify({ enabled: !node.enabled, configId: activeConfigId }),
     });
     if (response.ok) setNodes((await response.json()).nodes);
   }
@@ -94,7 +178,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
     const response = await fetch("/api/rules", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ list_type: ruleTab, value: ruleText }),
+      body: JSON.stringify({ list_type: ruleTab, value: ruleText, configId: activeConfigId }),
     });
     if (response.ok) {
       setRules((await response.json()).rules);
@@ -103,7 +187,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
   }
 
   async function deleteRule(id: number) {
-    const response = await fetch(`/api/rules/${id}`, { method: "DELETE" });
+    const response = await fetch(`/api/rules/${id}?configId=${activeConfigId}`, { method: "DELETE" });
     if (response.ok) setRules((await response.json()).rules);
   }
 
@@ -111,7 +195,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
     const response = await fetch("/api/settings", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(nextSettings),
+      body: JSON.stringify({ ...nextSettings, configId: activeConfigId }),
     });
     if (response.ok) {
       setSettings((await response.json()).settings);
@@ -120,7 +204,7 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
   }
 
   async function loadPreview() {
-    const response = await fetch("/api/preview");
+    const response = await fetch(`/api/preview?configId=${activeConfigId}`);
     setPreview(await response.text());
   }
 
@@ -141,6 +225,26 @@ export default function Dashboard({ initialNodes, initialRules, initialSettings,
 
       <section className="workspace">
         <div className="stack">
+          <section className="panel">
+            <div className="panel-header">
+              <div>
+                <div className="panel-title">订阅配置</div>
+                <div className="muted">每份配置独立保存节点、规则和默认策略</div>
+              </div>
+              <button className="danger" title="删除当前配置" onClick={deleteConfig} disabled={configs.length === 1}><Trash2 size={16} /></button>
+            </div>
+            <div className="panel-body stack">
+              <select value={activeConfigId} onChange={(event) => selectConfig(Number(event.target.value))}>
+                {configs.map((config) => <option key={config.id} value={config.id}>{config.name}</option>)}
+              </select>
+              <div className="row">
+                <input value={configName} onChange={(event) => setConfigName(event.target.value)} placeholder="订阅配置名称" />
+                <button title="保存配置名称" onClick={renameConfig}><Save size={16} /></button>
+                <button className="primary" title="新增订阅配置" onClick={createConfig}><Plus size={16} /></button>
+              </div>
+            </div>
+          </section>
+
           <section className="panel">
             <div className="panel-header">
               <div>

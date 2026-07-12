@@ -25,20 +25,20 @@ function loadTemplate(): Config {
   return yaml.load(fs.readFileSync(templatePath, "utf8")) as Config;
 }
 
-function setRuleProviderUrls(config: Config) {
+function setRuleProviderUrls(config: Config, token: string) {
   if (!config["rule-providers"]) return;
   if (config["rule-providers"].my_proxy) {
-    config["rule-providers"].my_proxy.url = `${env.baseUrl}/rules/proxy.list?token=${encodeURIComponent(env.subToken)}`;
+    config["rule-providers"].my_proxy.url = `${env.baseUrl}/rules/proxy.list?token=${encodeURIComponent(token)}`;
   }
   if (config["rule-providers"].my_direct) {
-    config["rule-providers"].my_direct.url = `${env.baseUrl}/rules/direct.list?token=${encodeURIComponent(env.subToken)}`;
+    config["rule-providers"].my_direct.url = `${env.baseUrl}/rules/direct.list?token=${encodeURIComponent(token)}`;
   }
 }
 
-export function generateConfigYaml() {
+export function generateConfigYaml(configId: number, token: string) {
   const config = loadTemplate();
-  const enabledNodes = listNodes().filter((node) => node.enabled);
-  const settings = getSettings();
+  const enabledNodes = listNodes(configId).filter((node) => node.enabled);
+  const settings = getSettings(configId);
   const proxies = enabledNodes.map((node) => parseVlessUri(node.uri));
   const nodeNames = proxies.map((proxy) => String(proxy.name));
   const defaultProxy = settings.default_proxy || nodeNames[0] || "DIRECT";
@@ -71,7 +71,7 @@ export function generateConfigYaml() {
   const fallbackGroup = (config["proxy-groups"] || []).find((group: any) => group.name === "🐟 漏网之鱼");
   if (fallbackGroup) fallbackGroup.proxies = unique([fallback, "🚀 节点选择", "DIRECT"]);
 
-  setRuleProviderUrls(config);
+  setRuleProviderUrls(config, token);
 
   return yaml.dump(config, {
     lineWidth: -1,
@@ -80,8 +80,8 @@ export function generateConfigYaml() {
   });
 }
 
-export function generateRuleList(type: "proxy" | "direct") {
-  return listRules()
+export function generateRuleList(configId: number, type: "proxy" | "direct") {
+  return listRules(configId)
     .filter((rule) => rule.enabled && rule.list_type === type)
     .map((rule) => rule.value.trim())
     .filter(Boolean)

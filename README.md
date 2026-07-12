@@ -7,6 +7,7 @@
 ## 功能
 
 - 管理后台登录
+- 创建、切换、重命名和删除多份独立订阅配置
 - 粘贴 `vless://` 链接并保存节点
 - 自动解析 VLESS Reality 参数
 - 维护强制代理、强制直连规则
@@ -69,7 +70,7 @@ BASE_URL=https://sub.example.com
 
 - `ADMIN_PASSWORD`：后台登录密码
 - `SESSION_SECRET`：登录 session HMAC 密钥，生产环境至少 32 位随机字符
-- `SUB_TOKEN`：订阅 URL token，生产环境至少 24 位随机字符；规则列表也会通过此 token 保护
+- `SUB_TOKEN`：默认订阅配置的 URL token，生产环境至少 24 位随机字符；新建配置会自动生成独立 token，规则列表也会使用对应配置的 token 保护
 - `DATABASE_PATH`：SQLite 数据库路径
 - `BASE_URL`：生成订阅里规则列表 URL 时使用的公网地址
 
@@ -91,6 +92,22 @@ Clash Verge 导入订阅：
 ```text
 https://sub.example.com/sub/<SUB_TOKEN>.yaml
 ```
+
+在后台创建额外订阅配置后，每份配置会得到独立 URL，并分别维护节点、规则和策略默认值。
+
+## 升级已有部署
+
+首次启动包含多订阅配置的版本时，应用会先将现有数据库备份为 `data/app.db.pre-multi-config.bak`，再在一个 SQLite 事务中迁移数据。原有节点、规则和默认策略会归入“默认配置”，原 `SUB_TOKEN` 订阅 URL 保持可用。
+
+升级前仍建议停止容器并额外保存一份 `data/app.db`：
+
+```bash
+docker compose down
+cp data/app.db data/app.db.manual-backup
+docker compose up -d --build
+```
+
+迁移失败时，应用不会提交部分 schema 或数据变更；保留容器日志和上述备份后再排查。
 
 ## 基础模板
 
