@@ -17,6 +17,7 @@
 - Keep generated Clash/Mihomo YAML deterministic and compatible with Clash Verge / Mihomo.
 - When touching security-sensitive code, preserve no-store responses, origin checks, session cookie constraints, and production secret validation.
 - Back up external app configuration before editing it.
+- Keep runtime data, environment files, and build artifacts out of Docker build contexts via `.dockerignore`.
 
 # Verification
 - Run the most relevant existing check when code changes: `npm run build` for full Next.js validation, or targeted syntax/type checks when build is unnecessary.

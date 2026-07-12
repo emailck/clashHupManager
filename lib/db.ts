@@ -9,6 +9,7 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 export const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 5000");
 
 function tableExists(name: string) {
   return Boolean(db.prepare("select 1 from sqlite_master where type = 'table' and name = ?").get(name));

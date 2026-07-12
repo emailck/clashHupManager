@@ -157,7 +157,7 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
     }
     setNodes(data.nodes);
     setNodeUri("");
-    setMessage("节点已保存");
+    setMessage(`已保存 ${data.added || 1} 个节点${data.errors?.length ? `，${data.errors.length} 个失败` : ""}`);
   }
 
   async function deleteNode(id: number) {
@@ -266,7 +266,7 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
               </div>
             </div>
             <div className="panel-body stack">
-              <textarea value={nodeUri} onChange={(event) => setNodeUri(event.target.value)} placeholder="vless://..." />
+              <textarea value={nodeUri} onChange={(event) => setNodeUri(event.target.value)} placeholder={"vless://...\n支持一次粘贴多个节点，每行一个"} />
               <div className="row">
                 <button className="primary" onClick={addNode}><Plus size={16} /> 添加节点</button>
                 {message ? <span className="muted">{message}</span> : null}
@@ -275,11 +275,11 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
                 {nodes.map((node) => (
                   <div className="item" key={node.id}>
                     <div>
-                      <div className="item-name">{node.name}</div>
+                      <div className="item-name">{node.name}{node.enabled ? "" : "（已停用）"}</div>
                       <div className="item-uri">{node.uri}</div>
                     </div>
                     <div className="row">
-                      <button onClick={() => toggleNode(node)}>{node.enabled ? "启用" : "停用"}</button>
+                      <button onClick={() => toggleNode(node)}>{node.enabled ? "停用" : "启用"}</button>
                       <button className="danger" title="删除" onClick={() => deleteNode(node.id)}><Trash2 size={16} /></button>
                     </div>
                   </div>

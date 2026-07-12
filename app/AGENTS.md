@@ -15,6 +15,7 @@
 - Match existing App Router route handler patterns.
 - Prefer shared validation/security helpers from `lib/` instead of duplicating logic in routes.
 - Keep nodes, rules, settings, previews, and generated URLs scoped to the selected subscription configuration.
+- Batch node imports must create unique names within the selected subscription configuration.
 
 # Verification
 - Run `npm run build` after route or UI behavior changes when practical.
