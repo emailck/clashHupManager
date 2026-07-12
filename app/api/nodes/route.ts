@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { db, getSubscriptionConfig, listNodes } from "@/lib/db";
-import { jsonNoStore, requireAdmin } from "@/lib/security";
+import { jsonNoStore, requireUser } from "@/lib/security";
 import { parseVlessUri } from "@/lib/vless";
 
-function getConfigId(value: string | null) {
+function getConfigId(value: string | null, userId: number) {
   const configId = Number(value);
-  return Number.isInteger(configId) && getSubscriptionConfig(configId) ? configId : null;
+  return Number.isInteger(configId) && getSubscriptionConfig(configId, userId) ? configId : null;
 }
 
 function splitNodeUris(value: string) {
@@ -28,19 +28,19 @@ function makeUniqueName(baseName: string, existingNames: Set<string>) {
 }
 
 export async function GET(request: NextRequest) {
-  const authError = await requireAdmin();
-  if (authError) return authError;
-  const configId = getConfigId(request.nextUrl.searchParams.get("configId"));
+  const { user, response } = await requireUser();
+  if (response) return response;
+  const configId = getConfigId(request.nextUrl.searchParams.get("configId"), user.id);
   if (!configId) return jsonNoStore({ error: "配置不存在" }, { status: 404 });
   return jsonNoStore({ nodes: listNodes(configId) });
 }
 
 export async function POST(request: NextRequest) {
-  const authError = await requireAdmin(request);
-  if (authError) return authError;
+  const { user, response } = await requireUser(request);
+  if (response) return response;
 
   const body = await request.json();
-  const configId = getConfigId(String(body.configId || ""));
+  const configId = getConfigId(String(body.configId || ""), user.id);
   if (!configId) return jsonNoStore({ error: "配置不存在" }, { status: 404 });
   const uris = splitNodeUris(String(body.uri || ""));
   if (uris.length === 0) return jsonNoStore({ error: "节点链接不能为空" }, { status: 400 });

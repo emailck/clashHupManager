@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { clearSession } from "@/lib/auth";
-import { jsonNoStore, requireAdmin } from "@/lib/security";
+import { jsonNoStore, requireUser } from "@/lib/security";
 
 export async function POST(request: NextRequest) {
-  const authError = await requireAdmin(request);
-  if (authError) return authError;
+  const { response } = await requireUser(request);
+  if (response) return response;
 
   await clearSession();
   return jsonNoStore({ ok: true });

@@ -28,3 +28,4 @@
 - `lib/AGENTS.md` — shared authentication, database, environment, generation, rate-limit, security, and VLESS parsing logic.
 - `templates/AGENTS.md` — base Mihomo subscription templates used by the generator.
 - `data/AGENTS.md` — local SQLite runtime state and database sidecar files.
+- `docs/AGENTS.md` — durable architecture decisions, implementation plans, and verification records.

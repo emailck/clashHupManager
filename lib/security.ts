@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthenticated } from "@/lib/auth";
+import { getCurrentUser, type CurrentUser } from "@/lib/auth";
 import { env } from "@/lib/env";
 
 export const noStoreHeaders = {
@@ -44,8 +44,22 @@ export function requireSameOrigin(request: NextRequest) {
   return null;
 }
 
-export async function requireAdmin(request?: NextRequest) {
-  if (!(await isAuthenticated())) return jsonNoStore({ error: "unauthorized" }, { status: 401 });
-  if (request) return requireSameOrigin(request);
-  return null;
+export type UserGuard =
+  | { user: CurrentUser; response: null }
+  | { user: null; response: NextResponse };
+
+export async function requireUser(request?: NextRequest): Promise<UserGuard> {
+  const user = await getCurrentUser();
+  if (!user) return { user: null, response: jsonNoStore({ error: "unauthorized" }, { status: 401 }) };
+
+  const originError = request && requireSameOrigin(request);
+  if (originError) return { user: null, response: originError };
+  return { user, response: null };
+}
+
+export async function requireAdmin(request?: NextRequest): Promise<UserGuard> {
+  const guard = await requireUser(request);
+  if (guard.response) return guard;
+  if (guard.user.role !== "admin") return { user: null, response: jsonNoStore({ error: "forbidden" }, { status: 403 }) };
+  return guard;
 }

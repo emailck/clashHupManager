@@ -2,6 +2,7 @@
 
 import { Copy, Eye, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import UserManagement from "./UserManagement";
 
 type NodeRow = {
   id: number;
@@ -25,15 +26,21 @@ type SubscriptionConfig = {
   token: string;
 };
 
+type CurrentUser = {
+  username: string;
+  role: "admin" | "user";
+};
+
 type Props = {
   initialConfigs: SubscriptionConfig[];
   initialNodes: NodeRow[];
   initialRules: RuleRow[];
   initialSettings: Record<string, string>;
   subscriptionBaseUrl: string;
+  currentUser?: CurrentUser | null;
 };
 
-export default function Dashboard({ initialConfigs, initialNodes, initialRules, initialSettings, subscriptionBaseUrl }: Props) {
+export default function Dashboard({ initialConfigs, initialNodes, initialRules, initialSettings, subscriptionBaseUrl, currentUser = null }: Props) {
   const [configs, setConfigs] = useState(initialConfigs);
   const [activeConfigId, setActiveConfigId] = useState(initialConfigs[0].id);
   const [nodes, setNodes] = useState(initialNodes);
@@ -218,6 +225,7 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
       <header className="topbar">
         <div className="brand">Clash Sub Manager</div>
         <div className="row">
+          {currentUser ? <span className="muted">{currentUser.username}</span> : null}
           <button title="刷新" onClick={refreshAll}><RefreshCw size={16} /></button>
           <button onClick={logout}>退出</button>
         </div>
@@ -244,6 +252,8 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
               </div>
             </div>
           </section>
+
+          {currentUser?.role === "admin" ? <UserManagement /> : null}
 
           <section className="panel">
             <div className="panel-header">

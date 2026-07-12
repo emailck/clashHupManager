@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { isAuthenticated } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { getSettings, listNodes, listRules, listSubscriptionConfigs } from "@/lib/db";
 import Dashboard from "@/app/ui/Dashboard";
@@ -9,13 +9,13 @@ export const dynamic = "force-dynamic";
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ login?: string }> }) {
   const params = await searchParams;
-  const authed = await isAuthenticated();
-  if (!authed && params.login !== "1") {
+  const user = await getCurrentUser();
+  if (!user && params.login !== "1") {
     redirect("/?login=1");
   }
-  if (!authed) return <LoginForm />;
+  if (!user) return <LoginForm />;
 
-  const configs = listSubscriptionConfigs();
+  const configs = listSubscriptionConfigs(user.id);
   const activeConfig = configs[0];
 
   return (
@@ -25,6 +25,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
       initialRules={listRules(activeConfig.id)}
       initialSettings={getSettings(activeConfig.id)}
       subscriptionBaseUrl={`${env.baseUrl}/sub`}
+      currentUser={user}
     />
   );
 }

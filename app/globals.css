@@ -153,6 +153,16 @@ textarea {
   min-width: 0;
 }
 
+.user-create {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) auto;
+  gap: 8px;
+}
+
+.user-item {
+  grid-template-columns: 1fr auto;
+}
+
 .muted {
   color: var(--muted);
   font-size: 13px;
@@ -234,6 +244,10 @@ textarea {
   }
 
   .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  .user-create {
     grid-template-columns: 1fr;
   }
 }

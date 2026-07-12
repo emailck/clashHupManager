@@ -7,6 +7,8 @@
 ## 功能
 
 - 管理后台登录
+- 用户名密码登录与自助注册，用户订阅数据隔离
+- 管理员可创建、启用/停用用户并重置用户密码
 - 创建、切换、重命名和删除多份独立订阅配置
 - 粘贴一个或多个 `vless://` 链接并保存节点
 - 自动解析 VLESS Reality 参数
@@ -46,7 +48,7 @@ npm run dev
 http://localhost:3000
 ```
 
-开发环境未配置 `.env` 时，默认管理密码是：
+开发环境未配置 `.env` 时，引导管理员账户为 `admin`，默认密码是：
 
 ```text
 admin
@@ -68,7 +70,7 @@ BASE_URL=https://sub.example.com
 
 说明：
 
-- `ADMIN_PASSWORD`：后台登录密码
+- `ADMIN_PASSWORD`：首次初始化时 `admin` 账户的密码；后续可在用户管理中重置
 - `SESSION_SECRET`：登录 session HMAC 密钥，生产环境至少 32 位随机字符
 - `SUB_TOKEN`：默认订阅配置的 URL token，生产环境至少 24 位随机字符；新建配置会自动生成独立 token，规则列表也会使用对应配置的 token 保护
 - `DATABASE_PATH`：SQLite 数据库路径
@@ -149,6 +151,7 @@ IP-CIDR,1.2.3.4/32,no-resolve
 
 - 使用 HTTPS
 - 使用强随机 `ADMIN_PASSWORD`、`SESSION_SECRET` 和 `SUB_TOKEN`
+- 升级为多用户版本后，使用管理员账户的用户管理面板维护账户状态和密码
 - 不要公开后台地址，或在反代层增加访问控制
 - Docker Compose 默认只绑定 `127.0.0.1:3000`，建议通过 Nginx/Caddy 暴露 HTTPS
 - 定期备份 `data/app.db`

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { checkPassword, createSession } from "@/lib/auth";
+import { createSession, verifyUserPassword } from "@/lib/auth";
 import { checkLoginRateLimit, clearLoginFailures, recordLoginFailure } from "@/lib/rate-limit";
 import { jsonNoStore, requireSameOrigin } from "@/lib/security";
 
@@ -11,12 +11,13 @@ export async function POST(request: NextRequest) {
   if (limitError) return limitError;
 
   const body = await request.json().catch(() => ({}));
-  if (!checkPassword(String(body.password || ""))) {
+  const user = verifyUserPassword(String(body.username || "admin").trim() || "admin", String(body.password || ""));
+  if (!user) {
     recordLoginFailure(request);
     return jsonNoStore({ error: "密码不正确" }, { status: 401 });
   }
 
   clearLoginFailures(request);
-  await createSession();
+  await createSession(user.id);
   return jsonNoStore({ ok: true });
 }
