@@ -3,7 +3,7 @@ import path from "node:path";
 import yaml from "js-yaml";
 import { env } from "@/lib/env";
 import { getSettings, listNodes, listRules } from "@/lib/db";
-import { parseVlessUri } from "@/lib/vless";
+import { parseNodeUri } from "@/lib/node-uri";
 
 type Config = Record<string, any>;
 
@@ -42,7 +42,7 @@ export function generateConfigYaml(configId: number, token: string) {
   const config = loadTemplate();
   const enabledNodes = listNodes(configId).filter((node) => node.enabled);
   const settings = getSettings(configId);
-  const proxies = enabledNodes.map((node) => ({ ...parseVlessUri(node.uri), name: node.name }));
+  const proxies = enabledNodes.map((node) => ({ ...parseNodeUri(node.uri), name: node.name }));
   const nodeNames = proxies.map((proxy) => String(proxy.name));
   const defaultProxy = settings.default_proxy || nodeNames[0] || "DIRECT";
   const defaultAi = settings.default_ai || defaultProxy;

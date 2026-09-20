@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { getSettings, listNodes, listRules, listSubscriptionConfigs } from "@/lib/db";
 import Dashboard from "@/app/ui/Dashboard";
 import LoginForm from "@/app/ui/LoginForm";
+import { subscriptionSourcesView } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ l
     <Dashboard
       initialConfigs={configs}
       initialNodes={listNodes(activeConfig.id)}
+      initialSources={subscriptionSourcesView(activeConfig.id)}
       initialRules={listRules(activeConfig.id)}
       initialSettings={getSettings(activeConfig.id)}
       subscriptionBaseUrl={`${env.baseUrl}/sub`}

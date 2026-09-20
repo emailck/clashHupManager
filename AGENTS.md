@@ -21,11 +21,12 @@
 
 # Verification
 - Run the most relevant existing check when code changes: `npm run build` for full Next.js validation, or targeted syntax/type checks when build is unnecessary.
+- Run `npm test` for subscription import, refresh, metadata, and fetch safety regressions; tests use temporary databases, never runtime data.
 - Validate YAML templates or generated YAML after modifying Clash/Mihomo configuration content.
 
 # Child DOX Index
 - `app/AGENTS.md` — Next.js App Router pages, API routes, public subscription/rule endpoints, and UI components.
-- `lib/AGENTS.md` — shared authentication, database, environment, generation, rate-limit, security, and VLESS parsing logic.
+- `lib/AGENTS.md` — shared authentication, database, environment, generation, rate-limit, security, node parsing, and upstream subscription logic.
 - `templates/AGENTS.md` — base Mihomo subscription templates used by the generator.
 - `data/AGENTS.md` — local SQLite runtime state and database sidecar files.
 - `docs/AGENTS.md` — durable architecture decisions, implementation plans, and verification records.

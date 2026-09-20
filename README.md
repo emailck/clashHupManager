@@ -12,6 +12,8 @@
 - 创建、切换、重命名和删除多份独立订阅配置
 - 粘贴一个或多个 `vless://` 链接并保存节点
 - 自动解析 VLESS Reality 参数
+- 导入 HTTP(S) 上游订阅，支持明文/Base64 的 VLESS 与 Hysteria2 节点列表
+- 查看上游流量和到期时间，手动更新节点与套餐信息
 - 维护强制代理、强制直连规则
 - 配置策略组默认值：
   - `🚀 节点选择`
@@ -77,6 +79,8 @@ BASE_URL=https://sub.example.com
 - `BASE_URL`：生成订阅里规则列表 URL 时使用的公网地址
 
 ## Docker 部署
+
+现有服务器更新和回滚步骤见 [部署维护说明](docs/deployment.md)，上游订阅使用方法见 [上游订阅导入](docs/upstream-subscriptions.md)。
 
 ```bash
 cp .env.example .env

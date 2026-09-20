@@ -8,8 +8,8 @@ const dbPath = path.resolve(process.cwd(), env.databasePath);
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 export const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
 db.pragma("busy_timeout = 5000");
+db.pragma("journal_mode = WAL");
 
 function tableExists(name: string) {
   return Boolean(db.prepare("select 1 from sqlite_master where type = 'table' and name = ?").get(name));
@@ -190,6 +190,19 @@ const initializeSchema = db.transaction(() => {
 
   initializeConfigSettings(legacyConfig.id);
 
+  db.exec(`
+    create table if not exists subscription_sources (
+      id integer primary key autoincrement,
+      config_id integer not null,
+      url text not null,
+      userinfo text not null default '',
+      updated_at text not null default current_timestamp,
+      unique (config_id, url),
+      foreign key (config_id) references subscription_configs(id) on delete cascade
+    );
+  `);
+  if (!hasColumn("nodes", "source_id")) db.exec("alter table nodes add column source_id integer");
+
   if (needsSessionOwnershipMigration) db.prepare("delete from sessions").run();
 
   const ruleCount = db.prepare("select count(*) as count from rules where config_id = ?").get(legacyConfig.id) as { count: number };
@@ -204,7 +217,7 @@ const initializeSchema = db.transaction(() => {
   }
 });
 
-initializeSchema();
+initializeSchema.immediate();
 
 export type NodeRow = {
   id: number;
@@ -212,6 +225,7 @@ export type NodeRow = {
   uri: string;
   enabled: number;
   sort_order: number;
+  source_id: number | null;
 };
 
 export type RuleRow = {
@@ -309,6 +323,7 @@ export function deleteSubscriptionConfig(id: number, ownerUserId: number) {
   const remove = db.transaction(() => {
     if (!getSubscriptionConfig(id, ownerUserId)) return;
     db.prepare("delete from nodes where config_id = ?").run(id);
+    db.prepare("delete from subscription_sources where config_id = ?").run(id);
     db.prepare("delete from rules where config_id = ?").run(id);
     db.prepare("delete from config_settings where config_id = ?").run(id);
     db.prepare("delete from subscription_configs where id = ? and owner_user_id = ?").run(id, ownerUserId);

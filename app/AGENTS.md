@@ -16,6 +16,9 @@
 - Prefer shared validation/security helpers from `lib/` instead of duplicating logic in routes.
 - Keep nodes, rules, settings, previews, and generated URLs scoped to the selected subscription configuration.
 - Batch node imports must create unique names within the selected subscription configuration.
+- `/api/nodes` accepts direct VLESS/Hysteria2 links or one HTTP(S) subscription URL; `/api/sources` updates/removes sources only after validating the owning user and configuration.
+- Dashboard source cards show quota/expiry snapshots and explicit update/delete controls. Reimporting the same source URL updates it; deleting a source removes its imported nodes.
+- `/sub/[token]` emits cached upstream userinfo for a single-source configuration and omits fake/default quotas; mixed-source configurations display individual plans in the dashboard only.
 
 # Verification
 - Run `npm run build` after route or UI behavior changes when practical.

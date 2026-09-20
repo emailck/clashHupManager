@@ -4,6 +4,7 @@
 # Ownership
 - Keep plans current while work is active; record completed work, validation evidence, and unresolved risks.
 - Do not include credentials, subscription tokens, node links, database contents, or server addresses.
+- `deployment.md` owns the existing Compose deployment layout, backup/update/rollback procedure, and release verification; `upstream-subscriptions.md` owns upstream import behavior and verification.
 
 # Local Contracts
 - Plans must identify migration behavior for persisted data and the authorization boundary for user-facing data.

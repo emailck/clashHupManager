@@ -20,6 +20,23 @@ type RuleRow = {
   sort_order: number;
 };
 
+type SubscriptionSource = {
+  id: number;
+  url: string;
+  updated_at: string;
+  info: { upload?: number; download?: number; total?: number; expire?: number };
+};
+
+function sourceUsage(source: SubscriptionSource) {
+  const { upload, download, total, expire } = source.info;
+  const traffic = total !== undefined && upload !== undefined && download !== undefined
+    ? `剩余 ${(Math.max(0, total - upload - download) / 1024 ** 3).toFixed(2)} / ${(total / 1024 ** 3).toFixed(2)} GiB`
+    : "上游未提供完整流量信息";
+  const expiry = expire && Number.isFinite(new Date(expire * 1000).getTime())
+    ? `${new Date(expire * 1000).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" })}（北京时间）` : "未提供到期时间";
+  return `${traffic} · 到期：${expiry}`;
+}
+
 type SubscriptionConfig = {
   id: number;
   name: string;
@@ -34,16 +51,19 @@ type CurrentUser = {
 type Props = {
   initialConfigs: SubscriptionConfig[];
   initialNodes: NodeRow[];
+  initialSources: SubscriptionSource[];
   initialRules: RuleRow[];
   initialSettings: Record<string, string>;
   subscriptionBaseUrl: string;
   currentUser?: CurrentUser | null;
 };
 
-export default function Dashboard({ initialConfigs, initialNodes, initialRules, initialSettings, subscriptionBaseUrl, currentUser = null }: Props) {
+export default function Dashboard({ initialConfigs, initialNodes, initialSources, initialRules, initialSettings, subscriptionBaseUrl, currentUser = null }: Props) {
   const [configs, setConfigs] = useState(initialConfigs);
   const [activeConfigId, setActiveConfigId] = useState(initialConfigs[0].id);
   const [nodes, setNodes] = useState(initialNodes);
+  const [sources, setSources] = useState(initialSources);
+  const [importing, setImporting] = useState(false);
   const [rules, setRules] = useState(initialRules);
   const [settings, setSettings] = useState(initialSettings);
   const [nodeUri, setNodeUri] = useState("");
@@ -75,7 +95,11 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
       fetch(`/api/rules?configId=${configId}`),
       fetch(`/api/settings?configId=${configId}`),
     ]);
-    if (nodeResponse.ok) setNodes((await nodeResponse.json()).nodes);
+    if (nodeResponse.ok) {
+      const data = await nodeResponse.json();
+      setNodes(data.nodes);
+      setSources(data.sources);
+    }
     if (ruleResponse.ok) setRules((await ruleResponse.json()).rules);
     if (settingsResponse.ok) setSettings((await settingsResponse.json()).settings);
   }
@@ -152,19 +176,48 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
   }
 
   async function addNode() {
-    const response = await fetch("/api/nodes", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ uri: nodeUri, configId: activeConfigId }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      setMessage(data.error || "添加节点失败");
-      return;
+    setImporting(true);
+    try {
+      const response = await fetch("/api/nodes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ uri: nodeUri, configId: activeConfigId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setMessage(data.error || "添加节点失败");
+        return;
+      }
+      setNodes(data.nodes);
+      setSources(data.sources);
+      setNodeUri("");
+      setMessage(`${data.imported ? "订阅已导入，" : ""}已保存 ${data.added || 1} 个节点${data.errors?.length ? `，${data.errors.length} 个失败` : ""}`);
+    } catch {
+      setMessage("请求失败，请重试");
+    } finally {
+      setImporting(false);
     }
-    setNodes(data.nodes);
-    setNodeUri("");
-    setMessage(`已保存 ${data.added || 1} 个节点${data.errors?.length ? `，${data.errors.length} 个失败` : ""}`);
+  }
+
+  async function updateSource(source: SubscriptionSource, remove = false) {
+    if (remove && !window.confirm("删除这个上游订阅及其导入的节点？")) return;
+    setImporting(true);
+    try {
+      const response = await fetch("/api/sources", {
+        method: remove ? "DELETE" : "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ configId: activeConfigId, sourceId: source.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) { setMessage(data.error || "操作失败"); return; }
+      setNodes(data.nodes);
+      setSources(data.sources);
+      setMessage(remove ? "上游订阅已删除" : "节点和订阅信息已更新");
+    } catch {
+      setMessage("请求失败，请重试");
+    } finally {
+      setImporting(false);
+    }
   }
 
   async function deleteNode(id: number) {
@@ -226,7 +279,7 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
         <div className="brand">Clash Sub Manager</div>
         <div className="row">
           {currentUser ? <span className="muted">{currentUser.username}</span> : null}
-          <button title="刷新" onClick={refreshAll}><RefreshCw size={16} /></button>
+          <button disabled={importing} title="刷新" onClick={refreshAll}><RefreshCw size={16} /></button>
           <button onClick={logout}>退出</button>
         </div>
       </header>
@@ -239,16 +292,16 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
                 <div className="panel-title">订阅配置</div>
                 <div className="muted">每份配置独立保存节点、规则和默认策略</div>
               </div>
-              <button className="danger" title="删除当前配置" onClick={deleteConfig} disabled={configs.length === 1}><Trash2 size={16} /></button>
+              <button className="danger" title="删除当前配置" onClick={deleteConfig} disabled={importing || configs.length === 1}><Trash2 size={16} /></button>
             </div>
             <div className="panel-body stack">
-              <select value={activeConfigId} onChange={(event) => selectConfig(Number(event.target.value))}>
+              <select disabled={importing} value={activeConfigId} onChange={(event) => selectConfig(Number(event.target.value))}>
                 {configs.map((config) => <option key={config.id} value={config.id}>{config.name}</option>)}
               </select>
               <div className="row">
                 <input value={configName} onChange={(event) => setConfigName(event.target.value)} placeholder="订阅配置名称" />
                 <button title="保存配置名称" onClick={renameConfig}><Save size={16} /></button>
-                <button className="primary" title="新增订阅配置" onClick={createConfig}><Plus size={16} /></button>
+                <button disabled={importing} className="primary" title="新增订阅配置" onClick={createConfig}><Plus size={16} /></button>
               </div>
             </div>
           </section>
@@ -272,15 +325,30 @@ export default function Dashboard({ initialConfigs, initialNodes, initialRules, 
             <div className="panel-header">
               <div>
                 <div className="panel-title">节点</div>
-                <div className="muted">粘贴 VLESS Reality 链接会自动解析名称</div>
+                <div className="muted">支持 VLESS、Hysteria2 节点链接，或 HTTP(S) 上游订阅地址</div>
               </div>
             </div>
             <div className="panel-body stack">
-              <textarea value={nodeUri} onChange={(event) => setNodeUri(event.target.value)} placeholder={"vless://...\n支持一次粘贴多个节点，每行一个"} />
+              <textarea disabled={importing} value={nodeUri} onChange={(event) => setNodeUri(event.target.value)} placeholder={"https://example.com/sub/...\n或粘贴 vless://、hysteria2:// 节点，每行一个"} />
               <div className="row">
-                <button className="primary" onClick={addNode}><Plus size={16} /> 添加节点</button>
+                <button className="primary" disabled={importing || !nodeUri.trim()} onClick={addNode}><Plus size={16} /> {importing ? "处理中…" : "添加节点 / 订阅"}</button>
                 {message ? <span className="muted">{message}</span> : null}
               </div>
+              {sources.length > 0 ? <div className="stack">
+                <div className="muted">上游订阅：点击更新可同步节点、流量和到期时间。更新会恢复上游仍包含的已删除节点。</div>
+                {sources.length > 1 ? <div className="muted">当前包含多个上游套餐，客户端不显示合并流量；可拆分为独立配置。</div> : null}
+                {sources.map((source) => <div className="item" key={source.id}>
+                  <div>
+                    <div className="item-name">{new URL(source.url).host}</div>
+                    <div className="muted">{sourceUsage(source)}</div>
+                    <div className="muted">最近更新：{source.updated_at} UTC</div>
+                  </div>
+                  <div className="row">
+                    <button disabled={importing} onClick={() => updateSource(source)}><RefreshCw size={16} /> 更新订阅</button>
+                    <button disabled={importing} className="danger" title="删除上游订阅及节点" onClick={() => updateSource(source, true)}><Trash2 size={16} /></button>
+                  </div>
+                </div>)}
+              </div> : null}
               <div className="list">
                 {nodes.map((node) => (
                   <div className="item" key={node.id}>
