@@ -96,16 +96,23 @@ function normalizeClassicalRule(value: string) {
   const line = value.trim();
   if (!line || line.startsWith("#")) return line;
 
-  const parts = line.split(",").map((part) => part.trim());
-  if (parts.length < 3) return line;
-
   const policyAliases = new Set([
     "🚀节点选择", "🚀 节点选择", "🤖AI网站", "🤖 AI网站", "🎬媒体解锁", "🎬 媒体解锁",
     "🐟漏网之鱼", "🐟 漏网之鱼", "🛑广告拦截", "🛑 广告拦截", "♻️自动选择",
     "♻️ 自动选择", "🌐全部节点", "🌐 全部节点", "DIRECT", "REJECT",
   ]);
-  const last = parts[parts.length - 1];
-  return policyAliases.has(last) ? parts.slice(0, -1).join(",") : parts.join(",");
+  const ipRuleTypes = new Set(["IP-CIDR", "IP-CIDR6", "IP-ASN", "GEOIP"]);
+
+  const parts = line
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part, index) => index < 2 || !policyAliases.has(part));
+
+  if (parts.length >= 2 && ipRuleTypes.has(parts[0].toUpperCase()) && !parts.includes("no-resolve")) {
+    parts.push("no-resolve");
+  }
+
+  return parts.join(",");
 }
 
 export function generateRuleList(configId: number, type: "proxy" | "direct") {

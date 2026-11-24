@@ -71,7 +71,7 @@ test("subscription persistence, refresh, isolation, YAML and response headers", 
     }
   });
   const subscriptions = await import("./subscriptions");
-  const { generateConfigYaml } = await import("./generator");
+  const { generateConfigYaml, generateRuleList } = await import("./generator");
   const { GET } = await import("../app/sub/[token]/route");
   let body = Buffer.from(`${vless}\n${hy2}`).toString("base64");
   let userinfo: string | undefined = "upload=1; download=2; total=100; expire=1791734400";
@@ -103,9 +103,30 @@ test("subscription persistence, refresh, isolation, YAML and response headers", 
   assert.equal(database.listNodes(config.id).length, 3);
   assert.equal(database.listNodes(config.id).find((n) => n.id === imported.id)?.enabled, 0);
   assert.equal(database.listNodes(config.id).find((n) => n.id === imported.id)?.sort_order, 999);
-  const generated = yaml.load(generateConfigYaml(config.id, config.token)) as { proxies: Array<Record<string, unknown>> };
+  const generated = yaml.load(generateConfigYaml(config.id, config.token)) as {
+    proxies: Array<Record<string, unknown>>;
+    dns: Record<string, any>;
+    rules: string[];
+    "rule-providers": Record<string, any>;
+  };
   assert.deepEqual(generated.proxies.map((p) => p.type), ["vless", "hysteria2"]);
   assert.equal(generated.proxies[1].password, "user:password");
+  assert.deepEqual(generated.dns.nameserver, [
+    "https://cloudflare-dns.com/dns-query",
+    "https://dns.google/dns-query",
+  ]);
+  assert.equal(generated.dns.fallback, undefined);
+  assert.deepEqual(generated.dns["default-nameserver"], ["223.5.5.5", "119.29.29.29"]);
+  assert.deepEqual(generated.dns["nameserver-policy"]?.["rule-set:private,cn,my_direct"], [
+    "https://dns.alidns.com/dns-query",
+    "https://doh.pub/dns-query",
+  ]);
+  assert.ok(generated.rules.includes("RULE-SET,geolocation-!cn,🚀 节点选择"));
+  assert.ok(generated.rules.includes("GEOIP,CN,DIRECT,no-resolve"));
+  assert.ok(!generated.rules.includes("GEOIP,CN,DIRECT"));
+  assert.ok(generated["rule-providers"]["geolocation-!cn"]);
+  database.db.prepare("insert into rules (list_type, value, config_id) values ('direct', 'IP-CIDR,192.168.10.0/24,DIRECT', ?)").run(config.id);
+  assert.match(generateRuleList(config.id, "direct"), /IP-CIDR,192\.168\.10\.0\/24,no-resolve/);
   const response = await GET(new Request("https://example.com/sub/test"), { params: Promise.resolve({ token: config.token }) });
   assert.equal(response.headers.get("subscription-userinfo"), userinfo);
   assert.equal(response.headers.get("cache-control"), "no-store");

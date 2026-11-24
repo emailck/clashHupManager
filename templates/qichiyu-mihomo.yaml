@@ -40,16 +40,32 @@ dns:
   ipv6: false
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "+.lan"
+    - "+.local"
+    - "localhost.ptlogin2.qq.com"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "+.stun.*.*"
+    - "+.stun.*.*.*"
+    - "+.stun.*.*.*.*"
   respect-rules: true
-  nameserver:
-    - https://dns.alidns.com/dns-query
-    - https://doh.pub/dns-query
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
   proxy-server-nameserver:
     - https://dns.alidns.com/dns-query
     - https://doh.pub/dns-query
-  fallback:
+  nameserver:
     - https://cloudflare-dns.com/dns-query
     - https://dns.google/dns-query
+  nameserver-policy:
+    "rule-set:private,cn,my_direct":
+      - https://dns.alidns.com/dns-query
+      - https://doh.pub/dns-query
 
 proxies: []
 
@@ -93,8 +109,9 @@ rules:
   - RULE-SET,google,🚀 节点选择
   - RULE-SET,github,🚀 节点选择
   - RULE-SET,telegram,🚀 节点选择
+  - RULE-SET,geolocation-!cn,🚀 节点选择
   - RULE-SET,cn,DIRECT
-  - GEOIP,CN,DIRECT
+  - GEOIP,CN,DIRECT,no-resolve
   - MATCH,🐟 漏网之鱼
 
 rule-providers:
@@ -160,6 +177,13 @@ rule-providers:
     format: mrs
     url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/telegram.mrs
     path: ./ruleset/telegram.mrs
+    interval: 86400
+  geolocation-!cn:
+    type: http
+    behavior: domain
+    format: mrs
+    url: https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/meta/geo/geosite/geolocation-!cn.mrs
+    path: ./ruleset/geolocation-!cn.mrs
     interval: 86400
   cn:
     type: http
