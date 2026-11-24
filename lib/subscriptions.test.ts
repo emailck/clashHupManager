@@ -38,6 +38,19 @@ test("plain and Base64 subscriptions preserve VLESS Reality and Hysteria2 settin
   assert.throws(() => parseSubscriptionBody(""), /数量/);
 });
 
+test("VLESS Reality keeps the X25519MLKEM768 option like Mihomo's converter", () => {
+  const option = (query: string) =>
+    (parseNodeUri(vless.replace("#Test", `${query}#Test`))["reality-opts"] as Record<string, unknown>)["support-x25519mlkem768"];
+  assert.equal(option("&support-x25519mlkem768=true"), true);
+  assert.equal(option("&support-x25519mlkem768=1"), true);
+  assert.equal(option("&support-x25519mlkem768=false"), false);
+  assert.equal(option("&support-x25519mlkem768=0"), false);
+  assert.equal(option(""), undefined);
+  assert.equal(option("&support-x25519mlkem768="), undefined);
+  assert.equal(option("&support-x25519mlkem768=invalid"), undefined);
+  assert.deepEqual(parseNodeUri(vless)["reality-opts"], { "public-key": "public-key", "short-id": "abcd" });
+});
+
 test("userinfo keeps real values including zero, without inventing missing quota", () => {
   assert.equal(formatSubscriptionInfo(parseSubscriptionInfo("upload=0; download=22; total=100; expire=1791734400")),
     "upload=0; download=22; total=100; expire=1791734400");
